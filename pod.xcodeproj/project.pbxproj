@@ -6,8 +6,15 @@
 	objectVersion = 46;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		42C54FF4165D729F000E2C2D /* pod~.c in Sources */ = {isa = PBXBuildFile; fileRef = 42C54FF3165D729F000E2C2D /* pod~.c */; };
+		42C54FF6165D72FA000E2C2D /* m_pd.h in Headers */ = {isa = PBXBuildFile; fileRef = 42C54FF5165D72FA000E2C2D /* m_pd.h */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
-		42C54FEB165D70E1000E2C2D /* libpod.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libpod.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		42C54FEB165D70E1000E2C2D /* pod~.pd_darwin */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = "pod~.pd_darwin"; sourceTree = BUILT_PRODUCTS_DIR; };
+		42C54FF3165D729F000E2C2D /* pod~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "pod~.c"; sourceTree = "<group>"; };
+		42C54FF5165D72FA000E2C2D /* m_pd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = m_pd.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -24,6 +31,7 @@
 		42C54FE0165D70E0000E2C2D = {
 			isa = PBXGroup;
 			children = (
+				42C54FF2165D7268000E2C2D /* Source */,
 				42C54FEC165D70E1000E2C2D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -31,9 +39,18 @@
 		42C54FEC165D70E1000E2C2D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				42C54FEB165D70E1000E2C2D /* libpod.dylib */,
+				42C54FEB165D70E1000E2C2D /* pod~.pd_darwin */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		42C54FF2165D7268000E2C2D /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				42C54FF5165D72FA000E2C2D /* m_pd.h */,
+				42C54FF3165D729F000E2C2D /* pod~.c */,
+			);
+			name = Source;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -43,6 +60,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				42C54FF6165D72FA000E2C2D /* m_pd.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -63,7 +81,7 @@
 			);
 			name = pod;
 			productName = pod;
-			productReference = 42C54FEB165D70E1000E2C2D /* libpod.dylib */;
+			productReference = 42C54FEB165D70E1000E2C2D /* pod~.pd_darwin */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
 /* End PBXNativeTarget section */
@@ -97,6 +115,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				42C54FF4165D729F000E2C2D /* pod~.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -151,16 +170,28 @@
 		42C54FF0165D70E1000E2C2D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				EXECUTABLE_PREFIX = lib;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				EXECUTABLE_EXTENSION = pd_darwin;
+				EXECUTABLE_PREFIX = "";
+				OTHER_LDFLAGS = (
+					"-undefined",
+					dynamic_lookup,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)~";
 			};
 			name = Debug;
 		};
 		42C54FF1165D70E1000E2C2D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				EXECUTABLE_PREFIX = lib;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				EXECUTABLE_EXTENSION = pd_darwin;
+				EXECUTABLE_PREFIX = "";
+				OTHER_LDFLAGS = (
+					"-undefined",
+					dynamic_lookup,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)~";
 			};
 			name = Release;
 		};
