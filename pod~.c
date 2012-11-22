@@ -32,6 +32,8 @@ typedef struct _pod_tilde
     t_outlet*   bang;
     t_float     o_a1, o_a2, o_b0, o_b1, o_b2;
     t_float     m_a1, m_a2, m_b0, m_b1, m_b2;
+    t_sample*   signal;
+    t_int       window_size;
 } t_pod_tilde;
 
 
@@ -81,24 +83,22 @@ static t_float pod_tilde_middle_filter(t_pod_tilde* x, t_sample in)
 
 static t_int* pod_tilde_perform(t_int* w)
 {
-    t_pod_tilde *x = (t_pod_tilde *)(w[1]);
-    t_sample  *in1 =    (t_sample *)(w[2]);
-    t_sample  *out =    (t_sample *)(w[3]);
-    int          n =           (int)(w[4]);
+    t_pod_tilde *x = (t_pod_tilde *)(w[1]);     // x is the reference to the data struct
+    t_sample  *in1 =    (t_sample *)(w[2]);     // in1 is an array of input samples
+    int          n =           (int)(w[3]);     // n is the number of samples passed to this function
     
     int thresh_print = 0;
-    t_float filt = 0.0;
+    
     for (int i = 0; i < n; i++)
     {
-        filt = pod_tilde_outer_filter(x, in1[i]);
-        filt = pod_tilde_middle_filter(x, filt);
+        // These two functions filter the signal, they're broken up because
+        // it might make more sense to just use the middle ear filter
+        x->signal[i] = pod_tilde_outer_filter(x, in1[i]);
+        x->signal[i] = pod_tilde_middle_filter(x, x->signal[i]);
         
-        if (filt > 0.9)
+        // This is just the most basic threshold onset detector
+        if (x->signal[i] > 0.9)
             thresh_print = 1;
-        else
-            thresh_print = 0;
-        
-        out[i] = filt;
     }
     
     if (thresh_print == 1)
@@ -106,23 +106,27 @@ static t_int* pod_tilde_perform(t_int* w)
         x->flag = thresh_print;
         pod_tilde_print(x);
         outlet_bang(x->bang);
+        x->flag = 0;
     }
     
-    return (w + 5);
+    return (w + 4);
 }
 
 static void pod_tilde_dsp(t_pod_tilde* x, t_signal** sp)
 {
-    dsp_add(pod_tilde_perform, 4, x, sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
+    dsp_add(pod_tilde_perform, 3, x, sp[0]->s_vec, sp[0]->s_n);
 }
 
-static void* pod_tilde_new(void)
+static void pod_tilde_free(t_pod_tilde* x)
+{
+    t_freebytes(x->signal, x->window_size * sizeof(t_sample));
+}
+
+static void* pod_tilde_new(t_floatarg window_size)
 {
     t_pod_tilde *x = (t_pod_tilde *)pd_new(pod_tilde_class);
     inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
-    
-    outlet_new(&x->x_obj, &s_signal);
-    
+        
     // Leftmost outlet outputs a bang
     x->bang = outlet_new(&x->x_obj, &s_bang);
     
@@ -141,15 +145,20 @@ static void* pod_tilde_new(void)
     x->m_b1 = 0.0;
     x->m_b2 = -0.8383;
     
+    // Window Size
+    x->window_size = window_size;           // There should be a check to see if this is a power of two
+    x->signal = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
+    
     
     post("pod~ v.0.1 by Gregoire Tronel, Jay Clark, and Scott McCoid");
+    post("window size: %i", x->window_size);
     
     return (void *)x; 
 }
 
 void pod_tilde_setup(void)
 {
-    pod_tilde_class = class_new(gensym("pod~"), (t_newmethod)pod_tilde_new, 0, sizeof(t_pod_tilde), CLASS_DEFAULT, 0);
+    pod_tilde_class = class_new(gensym("pod~"), (t_newmethod)pod_tilde_new, (t_method)pod_tilde_free, sizeof(t_pod_tilde), CLASS_DEFAULT, A_DEFFLOAT, 0);
     
     CLASS_MAINSIGNALIN(pod_tilde_class, t_pod_tilde, x_f);
     
