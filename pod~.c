@@ -21,6 +21,10 @@
 // SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "m_pd.h"
+#include <math.h>
+#define BLOCK_SIZE 64
+#define PI 3.14159265359
+#define TWO_PI (2 * PI)
 
 static t_class *pod_tilde_class;
 
@@ -32,8 +36,12 @@ typedef struct _pod_tilde
     t_outlet*   bang;
     t_float     o_a1, o_a2, o_b0, o_b1, o_b2;
     t_float     m_a1, m_a2, m_b0, m_b1, m_b2;
-    t_sample*   signal;
+    t_sample*   signal;                         // this holds samples
+    t_sample*   analysis;                       // this holds analysis values
     t_int       window_size;
+    t_float*    window;                         // using hanning for now
+    t_int       hop_size;
+    t_int       dsp_tick;
 } t_pod_tilde;
 
 
@@ -87,28 +95,46 @@ static t_int* pod_tilde_perform(t_int* w)
     t_sample  *in1 =    (t_sample *)(w[2]);     // in1 is an array of input samples
     int          n =           (int)(w[3]);     // n is the number of samples passed to this function
     
-    int thresh_print = 0;
+    int size_diff = x->window_size - n;
     
+    // This takes part of the signal buffer and shifts it to the front
+    for (int i = 0; i < size_diff; i++)
+        x->signal[i] = x->signal[i + n];
+    
+    // This takes the new samples filters them and puts them into the buffer
     for (int i = 0; i < n; i++)
     {
-        // These two functions filter the signal, they're broken up because
-        // it might make more sense to just use the middle ear filter
-        x->signal[i] = pod_tilde_outer_filter(x, in1[i]);
-        x->signal[i] = pod_tilde_middle_filter(x, x->signal[i]);
-        
-        // This is just the most basic threshold onset detector
-        if (x->signal[i] > 0.9)
-            thresh_print = 1;
+        x->signal[size_diff + i] = pod_tilde_outer_filter(x, in1[i]);
+        x->signal[size_diff + i] = pod_tilde_middle_filter(x, x->signal[size_diff + i]);
     }
+   
+    // Increase the dsp_tick variable by the number of samples passed to callback
+    x->dsp_tick += n;
     
-    if (thresh_print == 1)
+    // If the dsp_tick reaches the hop_size value, then we do our processing
+    if (x->dsp_tick >= x->hop_size)
     {
-        x->flag = thresh_print;
-        pod_tilde_print(x);
-        outlet_bang(x->bang);
-        x->flag = 0;
-    }
+        x->dsp_tick = 0;
+        
+        // do windowing
+        for (int i = 0; i < x->window_size; i++)
+            x->analysis[i] = x->signal[i] * x->window[i];
+        
+        // take fft
+        mayer_realfft(x->window_size, x->analysis);
+        
+        // Get the magnitude and assign it to the first half of the analysis buffer
+        for (int i = 0; i < x->window_size / 2; i++)
+        {
+            int i_index = x->window_size - i;
+            x->analysis[i] = sqrt((x->analysis[i] * x->analysis[i]) + (x->analysis[i_index] * x->analysis[i_index]));
+        }
+        
+        // multiply analysis buffer by the filterbank
+                                                                              
     
+    }
+        
     return (w + 4);
 }
 
@@ -120,9 +146,17 @@ static void pod_tilde_dsp(t_pod_tilde* x, t_signal** sp)
 static void pod_tilde_free(t_pod_tilde* x)
 {
     t_freebytes(x->signal, x->window_size * sizeof(t_sample));
+    t_freebytes(x->analysis, x->window_size * sizeof(t_sample));
+    t_freebytes(x->window, x->window_size * sizeof(t_float));
 }
 
-static void* pod_tilde_new(t_floatarg window_size)
+static void pod_tilde_create_window(t_pod_tilde* x)
+{
+    for (int i = 0; i < x->window_size; i++)
+        x->window[i] = 0.5 * (1 - cos((TWO_PI * i) / (x->window_size - 1)));
+}
+
+static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
 {
     t_pod_tilde *x = (t_pod_tilde *)pd_new(pod_tilde_class);
     inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
@@ -148,17 +182,30 @@ static void* pod_tilde_new(t_floatarg window_size)
     // Window Size
     x->window_size = window_size;           // There should be a check to see if this is a power of two
     x->signal = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
+    x->analysis = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
+    x->window = (t_float *)t_getbytes(x->window_size * sizeof(t_float));
+    for (int i = 0; i < x->window_size; i++)
+    {
+        x->signal[i] = 0.0;
+        x->analysis[i] = 0.0;
+        x->window[i] = 0.0;
+    }
+    pod_tilde_create_window(x);
+    
+    x->hop_size = hop_size;                 // This is in samples
+    x->dsp_tick = 0;
     
     
     post("pod~ v.0.1 by Gregoire Tronel, Jay Clark, and Scott McCoid");
     post("window size: %i", x->window_size);
+    post("hop size: %i", x->hop_size);
     
     return (void *)x; 
 }
 
 void pod_tilde_setup(void)
 {
-    pod_tilde_class = class_new(gensym("pod~"), (t_newmethod)pod_tilde_new, (t_method)pod_tilde_free, sizeof(t_pod_tilde), CLASS_DEFAULT, A_DEFFLOAT, 0);
+    pod_tilde_class = class_new(gensym("pod~"), (t_newmethod)pod_tilde_new, (t_method)pod_tilde_free, sizeof(t_pod_tilde), CLASS_DEFAULT, A_DEFFLOAT, A_DEFFLOAT, 0);
     
     CLASS_MAINSIGNALIN(pod_tilde_class, t_pod_tilde, x_f);
     
@@ -184,6 +231,13 @@ void pod_tilde_setup(void)
         (t_method)pod_tilde_middle_filter,
         gensym("middle_filter"),
         A_DEFFLOAT,
+        0
+    );
+    
+    class_addmethod(
+        pod_tilde_class,
+        (t_method)pod_tilde_create_window,
+        gensym("create_window"),
         0
     );
     
