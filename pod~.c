@@ -152,8 +152,13 @@ static void pod_tilde_free(t_pod_tilde* x)
 
 static void pod_tilde_create_window(t_pod_tilde* x)
 {
+    // Hanning
     for (int i = 0; i < x->window_size; i++)
         x->window[i] = 0.5 * (1 - cos((TWO_PI * i) / (x->window_size - 1)));
+        
+    // Hamming 
+//    for (int i = 0; i < x->window_size; i++)
+//        x->window[i] = 0.54 - 0.46 * (cos((TWO_PI * i) / (x->window_size - 1));
 }
 
 static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
