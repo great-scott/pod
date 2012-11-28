@@ -88,6 +88,11 @@ static t_float pod_tilde_middle_filter(t_pod_tilde* x, t_sample in)
     return out;
 }
 
+static int isPowerOfTwo(unsigned int x){
+    //Complement and Compare
+    return ((x != 0) && ((x & (~x + 1)) == x));
+}
+
 
 static t_int* pod_tilde_perform(t_int* w)
 {
@@ -163,6 +168,9 @@ static void pod_tilde_create_window(t_pod_tilde* x)
 
 static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
 {
+    
+    post("pod~ v.0.1 by Gregoire Tronel, Jay Clark, and Scott McCoid");
+    
     t_pod_tilde *x = (t_pod_tilde *)pd_new(pod_tilde_class);
     inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
         
@@ -185,7 +193,12 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     x->m_b2 = -0.8383;
     
     // Window Size
-    x->window_size = window_size;           // There should be a check to see if this is a power of two
+    if (! isPowerOfTwo(window_size)){
+        post("Window size must be a power of two. Applying defult window.");
+        x->window_size = 1024;
+    }
+    else x->window_size = window_size;
+
     x->signal = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
     x->analysis = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
     x->window = (t_float *)t_getbytes(x->window_size * sizeof(t_float));
@@ -197,16 +210,20 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     }
     pod_tilde_create_window(x);
     
-    x->hop_size = hop_size;                 // This is in samples
+    if (! isPowerOfTwo(hop_size)){
+        post("Hop size must be a power of two. Applying defult hop size.");
+        x->hop_size = 256;
+    }
+    else x->hop_size = hop_size; // This is in samples
     x->dsp_tick = 0;
     
-    
-    post("pod~ v.0.1 by Gregoire Tronel, Jay Clark, and Scott McCoid");
     post("window size: %i", x->window_size);
     post("hop size: %i", x->hop_size);
     
     return (void *)x; 
 }
+
+
 
 void pod_tilde_setup(void)
 {
