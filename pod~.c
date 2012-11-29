@@ -192,7 +192,6 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     post("pod~ v.0.1 by Gregoire Tronel, Jay Clark, and Scott McCoid");
     
     t_pod_tilde *x = (t_pod_tilde *)pd_new(pod_tilde_class);
-    inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
         
     // Leftmost outlet outputs a bang
     x->bang = outlet_new(&x->x_obj, &s_bang);
@@ -260,29 +259,6 @@ void pod_tilde_setup(void)
     );
     
     class_addmethod(pod_tilde_class, (t_method)pod_tilde_print, gensym("print"), 0);
-    
-    class_addmethod(
-        pod_tilde_class,
-        (t_method)pod_tilde_outer_filter,
-        gensym("outer_filter"),
-        A_DEFFLOAT,
-        0
-    );
-    
-    class_addmethod(
-        pod_tilde_class,
-        (t_method)pod_tilde_middle_filter,
-        gensym("middle_filter"),
-        A_DEFFLOAT,
-        0
-    );
-    
-    class_addmethod(
-        pod_tilde_class,
-        (t_method)pod_tilde_create_window,
-        gensym("create_window"),
-        0
-    );
     
     class_addmethod(
         pod_tilde_class,
