@@ -34,6 +34,7 @@ typedef struct _pod_tilde
     t_sample    x_f;
     t_int       flag;
     t_outlet*   bang;
+    t_outlet*   mag_outlet;
     t_float     o_a1, o_a2, o_b0, o_b1, o_b2;
     t_float     m_a1, m_a2, m_b0, m_b1, m_b2;
     t_sample*   signal;                         // this holds samples
@@ -139,6 +140,10 @@ static t_int* pod_tilde_perform(t_int* w)
         // take fft
         mayer_realfft(x->window_size, x->analysis);
         
+        // Zero out frequencies at DC and Nyquist
+        x->analysis[0] = 0.0;
+        x->analysis[x->window_size / 2] = 0.0;
+        
         // Get the magnitude and assign it to the first half of the analysis buffer
         for (int i = 0; i < x->window_size / 2; i++)
         {
@@ -195,6 +200,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
         
     // Leftmost outlet outputs a bang
     x->bang = outlet_new(&x->x_obj, &s_bang);
+    x->mag_outlet = outlet_new(&x->x_obj, &s_float);
     
     // Initialize filter coeffs
     // Outer
