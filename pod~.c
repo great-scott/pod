@@ -213,7 +213,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     
     // Window Size
     if (! isPowerOfTwo(window_size)){
-        post("Window size must be a power of two. Applying defult window.");
+        post("Window size must be a power of two. Applying default window.");
         x->window_size = 1024;
     }
     else x->window_size = window_size;
@@ -231,7 +231,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     pod_tilde_create_window(x);
     
     if (! isPowerOfTwo(hop_size)){
-        post("Hop size must be a power of two. Applying defult hop size.");
+        post("Hop size must be a power of two. Applying default hop size.");
         x->hop_size = 256;
     }
     else x->hop_size = hop_size; // This is in samples
