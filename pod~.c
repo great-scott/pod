@@ -39,7 +39,8 @@ typedef struct _pod_tilde
     t_sample*   signal;                         // this holds samples
     t_sample*   analysis;                       // this holds analysis values
     t_int       window_size;
-    t_float*    window;                         // using hanning for now
+    t_float*    window;                         
+    t_int       window_type;
     t_int       hop_size;
     t_int       dsp_tick;
 } t_pod_tilde;
@@ -91,6 +92,16 @@ static t_float pod_tilde_middle_filter(t_pod_tilde* x, t_sample in)
 static int isPowerOfTwo(unsigned int x){
     //Complement and Compare
     return ((x != 0) && ((x & (~x + 1)) == x));
+}
+
+static void pod_tilde_set_window_type(t_pod_tilde* x, t_float number){
+    
+    int selection = (int) number;
+    if (selection>=0 & selection<=1) {
+        x->window_type = selection;
+    }
+    else (post("Invalid windowing parameter"));
+    
 }
 
 
@@ -157,13 +168,22 @@ static void pod_tilde_free(t_pod_tilde* x)
 
 static void pod_tilde_create_window(t_pod_tilde* x)
 {
-    // Hanning
-    for (int i = 0; i < x->window_size; i++)
-        x->window[i] = 0.5 * (1 - cos((TWO_PI * i) / (x->window_size - 1)));
-        
-    // Hamming 
-//    for (int i = 0; i < x->window_size; i++)
-//        x->window[i] = 0.54 - 0.46 * (cos((TWO_PI * i) / (x->window_size - 1));
+    
+    switch (x->window_type) {
+        case 0:
+            // Hanning
+            for (int i = 0; i < x->window_size; i++)
+                x->window[i] = 0.5 * (1 - cos((TWO_PI * i) / (x->window_size - 1)));
+            break;
+            
+        case 1:
+            // Hamming
+            for (int i = 0; i < x->window_size; i++)
+                x->window[i] = 0.54 - 0.46 * (cos((TWO_PI * i) / (x->window_size - 1)));
+        default:
+            post("Unexpected windowing method");
+            break;
+    }
 }
 
 static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
@@ -208,6 +228,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
         x->analysis[i] = 0.0;
         x->window[i] = 0.0;
     }
+    x->window_type = 0; //Default hanning
     pod_tilde_create_window(x);
     
     if (! isPowerOfTwo(hop_size)){
@@ -260,6 +281,14 @@ void pod_tilde_setup(void)
         pod_tilde_class,
         (t_method)pod_tilde_create_window,
         gensym("create_window"),
+        0
+    );
+    
+    class_addmethod(
+        pod_tilde_class,
+        (t_method)pod_tilde_set_window_type,
+        gensym("window"),
+        A_FLOAT,
         0
     );
     
