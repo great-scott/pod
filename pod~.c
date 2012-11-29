@@ -23,10 +23,11 @@
 #include "m_pd.h"
 #include <math.h>
 #define BLOCK_SIZE 64
+#define FS 44100.0
 #define PI 3.14159265359
 #define TWO_PI (2 * PI)
 
-static t_class *pod_tilde_class;
+static t_class  *pod_tilde_class;
 
 typedef struct _pod_tilde
 {
@@ -120,7 +121,8 @@ static void pod_tilde_set_window_type(t_pod_tilde* x, t_float number){
 static t_float accumulate_bin_differences(t_pod_tilde* x){
     
     t_float diff = 0;
-    for (int i = 0; i < sizeof(x->bark_bins); i++){
+    t_int length = sizeof(x->bark_bins) / sizeof(t_float);
+    for (int i = 0; i < length; i++){
         diff += x->bark_bins[i] - x->prev_bark_bins[i];
     }
     
@@ -129,7 +131,8 @@ static t_float accumulate_bin_differences(t_pod_tilde* x){
 
 static void iterate_bark_bins(t_pod_tilde* x){
     
-    for (int i = 0; i<sizeof(x->bark_bins); i++) {
+    t_int length = sizeof(x->bark_bins) / sizeof(t_float);
+    for (int i = 0; i < length; i++) {
         x->prev_bark_bins[i] = x->bark_bins[i];
     }
     
@@ -165,7 +168,7 @@ static t_int* pod_tilde_perform(t_int* w)
         
         // do windowing
         for (int i = 0; i < x->window_size; i++)
-            x->analysis[i] = x->signal[i] * x->window[i];
+            x->analysis[i] = x->signal[i] * x->window[i];           // analysis is windowed signal
         
         // take fft
         mayer_realfft(x->window_size, x->analysis);
@@ -182,7 +185,6 @@ static t_int* pod_tilde_perform(t_int* w)
         }
         
         // multiply analysis buffer by the filterbank
-          
         
         
         
