@@ -121,10 +121,18 @@ static t_float accumulate_bin_differences(t_pod_tilde* x){
     
     t_float diff = 0;
     for (int i = 0; i < sizeof(x->bark_bins); i++){
-        diff = diff + (x->bark_bins[i] - x->prev_bark_bins[i]);
+        diff += x->bark_bins[i] - x->prev_bark_bins[i];
     }
     
     return diff;
+}
+
+static void iterate_bark_bins(t_pod_tilde* x){
+    
+    for (int i = 0; i<sizeof(x->bark_bins); i++) {
+        x->prev_bark_bins[i] = x->bark_bins[i];
+    }
+    
 }
 
 
@@ -184,9 +192,10 @@ static t_int* pod_tilde_perform(t_int* w)
         
             //assume filterbanks are generalized into each bin of the length 24 array "bark_bins"
         
-        //NEED TO ADDRESS INITIAL CASE
-                
-        //subtract this window from last to get to our feature space
+        //check for initial case
+        if (x->prev_bark_bins != NULL) {
+        
+        //subtract this frame from last to get to our feature space
         x->bark_difference = accumulate_bin_differences(x);
 
         
@@ -210,7 +219,7 @@ static t_int* pod_tilde_perform(t_int* w)
                 
             case 1: //Flag is up.
                 
-                //can we go even higher above the threshold?
+                //did we go even higher above the threshold?
                 if (x->bark_difference > x->peak_value) {
                     
                     //flag this as a better estimate for the onset.
@@ -220,6 +229,7 @@ static t_int* pod_tilde_perform(t_int* w)
                     
                 }
                 
+                //if not...
                 else{
                     
                     //Have we gone beyond our debouncing window?
@@ -227,8 +237,8 @@ static t_int* pod_tilde_perform(t_int* w)
                         
                         //onset verified!
                         outlet_bang(x->bang);
-                        //outlet_float(x, x->peak_value); //fix this after pull.
-                        
+                        outlet_float(x->mag_outlet, x->peak_value); 
+            
                         x->debounce_iterator = 0;
                         x->flag = 0;
                         
@@ -241,7 +251,7 @@ static t_int* pod_tilde_perform(t_int* w)
                             
                             //onset verified!
                             outlet_bang(x->bang);
-                            //outlet_float(x, x->peak_value); //fix this after pull.
+                            outlet_float(x->mag_outlet, x->peak_value);
                             
                             x->debounce_iterator = 0;
                             x->flag = 0;
@@ -252,22 +262,16 @@ static t_int* pod_tilde_perform(t_int* w)
                         //we have a onset flagged, but we haven't increased or crossed the lower threshold yet.
                         //Lets wait a bit longer to make sure our tagged onset is legit
                         else x->debounce_iterator++;
-                    
                     }
-                    
-                    
-                    
+                      
                     
                 }
-                
-                
-              
 
                 break;
         }
+        }
         
-        
-        
+        iterate_bark_bins(x);
         
     }
         
