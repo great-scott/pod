@@ -32,7 +32,6 @@ typedef struct _pod_tilde
 {
     t_object    x_obj;
     t_sample    x_f;
-    t_int       flag;
     t_outlet*   bang;
     t_float     o_a1, o_a2, o_b0, o_b1, o_b2;
     t_float     m_a1, m_a2, m_b0, m_b1, m_b2;
@@ -43,6 +42,19 @@ typedef struct _pod_tilde
     t_int       window_type;
     t_int       hop_size;
     t_int       dsp_tick;
+    
+    //onset detection
+    t_float     bark_bins[24];
+    t_float     prev_bark_bins[24];
+    t_float     u_threshold, l_threshold;
+    t_float     bark_difference;
+    t_float     peak_value;
+    t_int       flag;
+    t_int       debounce_iterator;
+    t_int       debounce_threshold;
+    
+    
+    
 } t_pod_tilde;
 
 
@@ -104,6 +116,16 @@ static void pod_tilde_set_window_type(t_pod_tilde* x, t_float number){
     
 }
 
+static t_float accumulate_bin_differences(t_pod_tilde* x){
+    
+    t_float diff = 0;
+    for (int i = 0; i < sizeof(x->bark_bins); i++){
+        diff = diff + (x->bark_bins[i] - x->prev_bark_bins[i]);
+    }
+    
+    return diff;
+}
+
 
 static t_int* pod_tilde_perform(t_int* w)
 {
@@ -147,8 +169,101 @@ static t_int* pod_tilde_perform(t_int* w)
         }
         
         // multiply analysis buffer by the filterbank
-                                                                              
-    
+          
+        
+        
+        
+////////////////////////////// where the magic happens /////////////////////////////////////////////////
+        
+        
+        
+            //assume filterbanks are generalized into each bin of the length 24 array "bark_bins"
+        
+        //NEED TO ADDRESS INITIAL CASE
+                
+        //subtract this window from last to get to our feature space
+        x->bark_difference = accumulate_bin_differences(x);
+
+        
+        //Is our flag raised?
+        switch (x->flag) {
+                
+            case 0: //Flag is down.
+                
+                //Lets check if we're above the upper threshold
+                if (x->bark_difference > x->u_threshold) {
+                    
+                    //Let's flag this spot for a potential onset and hang on to that peak value if it ends up being one
+                    x->flag = 1;
+                    x->debounce_iterator = 1;
+                    x->peak_value=x->bark_difference;
+                }
+
+                //otherwise, we'll keep waiting for an onset. 
+                
+                break;
+                
+            case 1: //Flag is up.
+                
+                //can we go even higher above the threshold?
+                if (x->bark_difference > x->peak_value) {
+                    
+                    //flag this as a better estimate for the onset.
+                    x->flag = 1;
+                    x->debounce_threshold = 1;
+                    x->peak_value = x->bark_difference;
+                    
+                }
+                
+                else{
+                    
+                    //Have we gone beyond our debouncing window?
+                    if (x->debounce_iterator > x->debounce_threshold) {
+                        
+                        //onset verified!
+                        outlet_bang(x->bang);
+                        //outlet_float(x, x->peak_value); //fix this after pull.
+                        
+                        x->debounce_iterator = 0;
+                        x->flag = 0;
+                        
+                    }
+                    
+                    else{
+                        
+                        //are we below our lower threshold?
+                        if(x->bark_difference < x->l_threshold){
+                            
+                            //onset verified!
+                            outlet_bang(x->bang);
+                            //outlet_float(x, x->peak_value); //fix this after pull.
+                            
+                            x->debounce_iterator = 0;
+                            x->flag = 0;
+                            
+                            
+                        }
+                        
+                        //we have a onset flagged, but we haven't increased or crossed the lower threshold yet.
+                        //Lets wait a bit longer to make sure our tagged onset is legit
+                        else x->debounce_iterator++;
+                    
+                    }
+                    
+                    
+                    
+                    
+                }
+                
+                
+              
+
+                break;
+        }
+        
+        
+        
+        
     }
         
     return (w + 4);
@@ -240,6 +355,13 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     
     post("window size: %i", x->window_size);
     post("hop size: %i", x->hop_size);
+    
+    
+    
+    //Lower our flag. No onsets yet!
+    x->flag = 0;
+    x->debounce_iterator=0;
+    x->debounce_threshold=5;
     
     return (void *)x; 
 }
