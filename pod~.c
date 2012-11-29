@@ -33,6 +33,7 @@ typedef struct _pod_tilde
     t_object    x_obj;
     t_sample    x_f;
     t_outlet*   bang;
+    t_outlet*   mag_outlet;
     t_float     o_a1, o_a2, o_b0, o_b1, o_b2;
     t_float     m_a1, m_a2, m_b0, m_b1, m_b2;
     t_sample*   signal;                         // this holds samples
@@ -160,6 +161,10 @@ static t_int* pod_tilde_perform(t_int* w)
         
         // take fft
         mayer_realfft(x->window_size, x->analysis);
+        
+        // Zero out frequencies at DC and Nyquist
+        x->analysis[0] = 0.0;
+        x->analysis[x->window_size / 2] = 0.0;
         
         // Get the magnitude and assign it to the first half of the analysis buffer
         for (int i = 0; i < x->window_size / 2; i++)
@@ -307,10 +312,10 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     post("pod~ v.0.1 by Gregoire Tronel, Jay Clark, and Scott McCoid");
     
     t_pod_tilde *x = (t_pod_tilde *)pd_new(pod_tilde_class);
-    inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
         
     // Leftmost outlet outputs a bang
     x->bang = outlet_new(&x->x_obj, &s_bang);
+    x->mag_outlet = outlet_new(&x->x_obj, &s_float);
     
     // Initialize filter coeffs
     // Outer
@@ -329,7 +334,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     
     // Window Size
     if (! isPowerOfTwo(window_size)){
-        post("Window size must be a power of two. Applying defult window.");
+        post("Window size must be a power of two. Applying default window.");
         x->window_size = 1024;
     }
     else x->window_size = window_size;
@@ -347,7 +352,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     pod_tilde_create_window(x);
     
     if (! isPowerOfTwo(hop_size)){
-        post("Hop size must be a power of two. Applying defult hop size.");
+        post("Hop size must be a power of two. Applying default hop size.");
         x->hop_size = 256;
     }
     else x->hop_size = hop_size; // This is in samples
@@ -382,29 +387,6 @@ void pod_tilde_setup(void)
     );
     
     class_addmethod(pod_tilde_class, (t_method)pod_tilde_print, gensym("print"), 0);
-    
-    class_addmethod(
-        pod_tilde_class,
-        (t_method)pod_tilde_outer_filter,
-        gensym("outer_filter"),
-        A_DEFFLOAT,
-        0
-    );
-    
-    class_addmethod(
-        pod_tilde_class,
-        (t_method)pod_tilde_middle_filter,
-        gensym("middle_filter"),
-        A_DEFFLOAT,
-        0
-    );
-    
-    class_addmethod(
-        pod_tilde_class,
-        (t_method)pod_tilde_create_window,
-        gensym("create_window"),
-        0
-    );
     
     class_addmethod(
         pod_tilde_class,
