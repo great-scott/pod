@@ -73,8 +73,9 @@ typedef struct _pod_tilde
     t_int       debounce_threshold;
     
     // filterbank
-//    t_bark_bin  filter_bands[24];
     t_bark_bin  filter_bands[2];
+    t_sample*   filtered_odd;
+    t_sample*   filtered_even;
     
     
 } t_pod_tilde;
@@ -96,17 +97,23 @@ static void linspace(t_int low, t_int high, t_int subdiv, t_float* line_buffer)
 
 static void multiply_filterbank(t_pod_tilde* x)
 {
-    
+    for (int i = 0; i < x->half_window_size; i++)
+    {
+        x->filtered_odd[i] = x->filter_bands[0].band[i] * x->analysis[i];           // non overlapping bands starting at 0
+        x->filtered_even[i] = x->filter_bands[1].band[i] * x->analysis[i];          // non overlapping bands starting at 50 (first bark center)
+        x->analysis[i] = x->filtered_odd[i] + x->filtered_even[i];
+    }
 }
 
 
-static void create_filterbank_mod(t_pod_tilde* x)
+static void create_filterbank(t_pod_tilde* x)
 {
     float period = FS / x->window_size;
     int direction = 0;                     // direction is either +1 for increasing or -1 for decreasing
     
     float length, slope, point;
     
+    // NUM_BARKS is still 24, but we have an array of length 26, so we've added lower and upper limits
     for (int i = 0; i < NUM_BARKS; i++)
     {
         for (int j = 0; j < x->half_window_size; j++)
@@ -132,107 +139,10 @@ static void create_filterbank_mod(t_pod_tilde* x)
                 point = 1 - slope * bark_ctr[i + 1];
             
                 x->filter_bands[i % 2].band[j] = slope * frequency + point;         // y = mx + b
-            
-                printf("%i\t%f\n", i % 2, x->filter_bands[i % 2].band[j]);
             }
         }
     }
 }
-
-static void create_filterbank(t_pod_tilde* x)
-{
-    //int maxFreq = FS / 2;
-    int length = x->window_size / 2;
-    float Fscale = FS / length;
-    
-    int bark_lim_length = NUM_BARKS + 1;
-    int bark_ctr_length = NUM_BARKS;
-    int barkLenUp, barkLenDown;
-    float upSlope, upPoint;
-    
-    // Scale bark bands to half window length
-    for (int i = 0; i < bark_ctr_length; i++)
-    {
-        bark_lim[i] = ceil((float)bark_lim[i] / Fscale);
-        bark_ctr[i] = ceil((float)bark_ctr[i] / Fscale);
-    }
-    
-    bark_lim[bark_lim_length] = ceil(bark_lim[bark_lim_length] / Fscale);
-    
-    // loop through and create bands 1 - 22 (zero based)
-    for (int i = 0; i < bark_ctr_length; i++)
-    {
-        // If it's the first band, then set barLenUp to use the first  bark_lim value
-        if (i == 0)
-            barkLenUp = bark_ctr[i] - bark_lim[i];
-        else
-            barkLenUp = bark_ctr[i] - bark_ctr[i - 1];
-        
-        barkLenDown = bark_ctr[i + 1] - bark_ctr[i];
-        
-        //float bandLength = barkLenUp + barkLenDown;
-        float xrangeUp[barkLenUp];
-        float xrangeDown[barkLenDown];
-        
-        // up slope
-        upSlope = 1 / barkLenUp;
-        upPoint = 1 - upSlope * bark_ctr[i];
-        
-        if (i == 0)
-            linspace(bark_lim[i], bark_ctr[i], barkLenUp, xrangeUp);
-        else
-            linspace(bark_ctr[i - 1], bark_ctr[i], barkLenUp, xrangeUp);
-        
-        for (int j = 0; j < barkLenUp; j++)
-            xrangeUp[j] = upSlope * xrangeUp[j] + upPoint;
-        
-        // down slope
-        float downSlope = -1 / barkLenDown;
-        float downPoint = 1 - downSlope * bark_ctr[i];
-        
-        if (i == bark_ctr_length - 1)
-            linspace(bark_ctr[i], bark_lim[i + 1], barkLenDown, xrangeDown);
-        else
-            linspace(bark_ctr[i], bark_ctr[i + 1], barkLenDown, xrangeDown);
-        
-        for (int j = 0; j < barkLenDown; j++)
-            xrangeDown[j] = downSlope * xrangeDown[j] + downPoint;
-        
-        
-        // cumulate bark bands into overall filter bank
-        // this is the first half of the triangle
-        if (i == 0)
-        {
-            for (int k = 0; k < barkLenUp; k++)
-                x->filter_bands[0].band[bark_lim[0] + k] = xrangeUp[k];
-        }
-        else if (i == bark_ctr_length - 1)
-        {
-            for (int k = 0; k < barkLenUp; k++)
-                x->filter_bands[i].band[bark_ctr[i] + k] = xrangeUp[k];
-        }
-        else
-        {
-            for (int k = 0; k < barkLenUp; k++)
-                x->filter_bands[i].band[bark_ctr[i - 1] + k] = xrangeUp[k];
-        }
-        
-        // This is the second half of the triangle
-        if (i == bark_ctr_length - 1)
-        {
-            for (int k = 0; k < barkLenDown; k++)
-                x->filter_bands[i].band[bark_lim[i + 1] + k] = xrangeDown[k];
-        }
-        else
-        {
-            for (int k = 0; k < barkLenDown; k++)
-                x->filter_bands[i].band[bark_ctr[i] + k] = xrangeDown[k];
-        }
-        
-    }
-    
-}
-
 
 static t_float pod_tilde_outer_filter(t_pod_tilde* x, t_sample in)
 {
@@ -352,9 +262,9 @@ static t_int* pod_tilde_perform(t_int* w)
             int i_index = x->window_size - i;
             x->analysis[i] = sqrt((x->analysis[i] * x->analysis[i]) + (x->analysis[i_index] * x->analysis[i_index]));
         }
-        
+    
         // multiply analysis buffer by the filterbank
-        
+        multiply_filterbank(x);
         
         
 ////////////////////////////// where the magic happens /////////////////////////////////////////////////
@@ -478,6 +388,9 @@ static void pod_tilde_free(t_pod_tilde* x)
     t_freebytes(x->analysis, x->window_size * sizeof(t_sample));
     t_freebytes(x->window, x->window_size * sizeof(t_float));
     
+    t_freebytes(x->filtered_odd, x->half_window_size * sizeof(t_sample));
+    t_freebytes(x->filtered_even, x->half_window_size * sizeof(t_sample));
+    
     free_bark_bands(x);
 }
 
@@ -539,6 +452,9 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     x->signal = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
     x->analysis = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
     x->window = (t_float *)t_getbytes(x->window_size * sizeof(t_float));
+    x->filtered_odd = (t_sample *)t_getbytes(x->half_window_size * sizeof(t_sample));
+    x->filtered_even= (t_sample *)t_getbytes(x->half_window_size * sizeof(t_sample));
+    
         
     for (int i = 0; i < x->window_size; i++)
     {
@@ -553,7 +469,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     new_bark_bands(x);
     
     // create filter-bank associated with window size
-    create_filterbank_mod(x);
+    create_filterbank(x);
     
     if (! isPowerOfTwo(hop_size)){
         post("Hop size must be a power of two. Applying default hop size.");
