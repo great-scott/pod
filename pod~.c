@@ -22,15 +22,20 @@
 
 #include "m_pd.h"
 #include <math.h>
+#include <stdio.h>
 #define BLOCK_SIZE 64
 #define FS 44100.0
 #define PI 3.14159265359
 #define TWO_PI (2 * PI)
 #define NUM_BARKS 24
 
+#define NUM_BARK_FILTER_BUFS 2
+
 // define bark limits and centers
 t_int bark_lim[25] =  { 20, 100, 200, 300, 400, 510, 630, 770, 920, 1080, 1270, 1480, 1720, 2000, 2320, 2700, 3150, 3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500 };
-t_int bark_ctr[24] = { 50, 150, 250, 350, 450, 570, 700, 840, 1000, 1170, 1370, 1600, 1850, 2150, 2500, 2900, 3400, 4000, 4800, 5800, 7000, 8500, 10500, 13500 };
+//t_int bark_ctr[24] = { 50, 150, 250, 350, 450, 570, 700, 840, 1000, 1170, 1370, 1600, 1850, 2150, 2500, 2900, 3400, 4000, 4800, 5800, 7000, 8500, 10500, 13500 };
+t_int bark_ctr[26] = {0, 50, 150, 250, 350, 450, 570, 700, 840, 1000, 1170, 1370, 1600, 1850, 2150, 2500, 2900, 3400, 4000, 4800, 5800, 7000, 8500, 10500, 13500, 15500};
+
 
 static t_class  *pod_tilde_class;
 
@@ -55,6 +60,7 @@ typedef struct _pod_tilde
     t_int       window_type;
     t_int       hop_size;
     t_int       dsp_tick;
+    t_int       half_window_size;
     
     //onset detection
     t_float     bark_bins[24];
@@ -67,7 +73,9 @@ typedef struct _pod_tilde
     t_int       debounce_threshold;
     
     // filterbank
-    t_bark_bin  filter_bands[24];
+//    t_bark_bin  filter_bands[24];
+    t_bark_bin  filter_bands[2];
+    
     
 } t_pod_tilde;
 
@@ -91,6 +99,45 @@ static void multiply_filterbank(t_pod_tilde* x)
     
 }
 
+
+static void create_filterbank_mod(t_pod_tilde* x)
+{
+    float period = FS / x->window_size;
+    int direction = 0;                     // direction is either +1 for increasing or -1 for decreasing
+    
+    float length, slope, point;
+    
+    for (int i = 0; i < NUM_BARKS; i++)
+    {
+        for (int j = 0; j < x->half_window_size; j++)
+        {
+            float frequency = period * j;
+            
+            if (frequency >= bark_ctr[i] && frequency < bark_ctr[i + 1])
+            {
+                direction = 1;
+                length = bark_ctr[i + 1] - bark_ctr[i];
+            }
+            else if (frequency >= bark_ctr[i + 1] && frequency < bark_ctr[i + 2])
+            {
+                direction = -1;
+                length = bark_ctr[i + 2] - bark_ctr[i + 1];
+            }
+            else
+                direction = 0;  // this means we're over the bounds and don't want to deal with it
+
+            if (direction != 0)
+            {
+                slope = direction / length;
+                point = 1 - slope * bark_ctr[i + 1];
+            
+                x->filter_bands[i % 2].band[j] = slope * frequency + point;         // y = mx + b
+            
+                printf("%i\t%f\n", i % 2, x->filter_bands[i % 2].band[j]);
+            }
+        }
+    }
+}
 
 static void create_filterbank(t_pod_tilde* x)
 {
@@ -409,11 +456,11 @@ static void pod_tilde_dsp(t_pod_tilde* x, t_signal** sp)
 
 static void new_bark_bands(t_pod_tilde* x)
 {
-    for (int i = 0; i < NUM_BARKS; i++)
+    for (int i = 0; i < NUM_BARK_FILTER_BUFS; i++)
     {
         x->filter_bands[i].band = (t_float *)t_getbytes((x->window_size / 2) * sizeof(t_float));
     
-        for (int j = 0; j < x->window_size / 2; j++)
+        for (int j = 0; j < x->half_window_size; j++)
             x->filter_bands[i].band[j] = 0.0;
     }
     
@@ -421,8 +468,8 @@ static void new_bark_bands(t_pod_tilde* x)
 
 static void free_bark_bands(t_pod_tilde* x)
 {
-    for (int i = 0; i < NUM_BARKS; i++)
-        t_freebytes(x->filter_bands[i].band, (x->window_size / 2) * sizeof(t_float));
+    for (int i = 0; i < NUM_BARK_FILTER_BUFS; i++)
+        t_freebytes(x->filter_bands[i].band, (x->half_window_size) * sizeof(t_float));
 }
 
 static void pod_tilde_free(t_pod_tilde* x)
@@ -486,6 +533,8 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
         x->window_size = 1024;
     }
     else x->window_size = window_size;
+    
+    x->half_window_size = x->window_size / 2;
 
     x->signal = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
     x->analysis = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
@@ -504,7 +553,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     new_bark_bands(x);
     
     // create filter-bank associated with window size
-    create_filterbank(x);
+    create_filterbank_mod(x);
     
     if (! isPowerOfTwo(hop_size)){
         post("Hop size must be a power of two. Applying default hop size.");
