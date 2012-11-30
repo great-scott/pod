@@ -26,8 +26,15 @@
 #define FS 44100.0
 #define PI 3.14159265359
 #define TWO_PI (2 * PI)
+#define NUM_BARKS 24
 
 static t_class  *pod_tilde_class;
+
+typedef struct _bark_bin
+{
+    t_float*    band;
+    
+} t_bark_bin;
 
 typedef struct _pod_tilde
 {
@@ -55,7 +62,8 @@ typedef struct _pod_tilde
     t_int       debounce_iterator;
     t_int       debounce_threshold;
     
-    
+    // filterbank
+    t_bark_bin* filter_bands;
     
 } t_pod_tilde;
 
@@ -64,6 +72,18 @@ static void pod_tilde_print(t_pod_tilde* x)
 {
     post("Threshold: %i", (int)x->flag);
 }
+
+static void linspace(t_int low, t_int high, t_int subdiv, t_float* line_buffer)
+{
+    t_float iter = (high - low) / subdiv;
+    line_buffer[0] = low;
+    
+    for (int i = 1; i < subdiv; i++)
+    {
+        line_buffer[i] = line_buffer[i - 1] + iter;
+    }
+}
+
 
 static t_float pod_tilde_outer_filter(t_pod_tilde* x, t_sample in)
 {
@@ -285,11 +305,27 @@ static void pod_tilde_dsp(t_pod_tilde* x, t_signal** sp)
     dsp_add(pod_tilde_perform, 3, x, sp[0]->s_vec, sp[0]->s_n);
 }
 
+static void new_bark_bands(t_pod_tilde* x)
+{
+    for (int i = 0; i < NUM_BARKS; i++)
+        x->filter_bands[i].band = (t_float *)t_getbytes((x->window_size / 2) * sizeof(t_float));
+}
+
+static void free_bark_bands(t_pod_tilde* x)
+{
+    for (int i = 0; i < NUM_BARKS; i++)
+        t_freebytes(x->filter_bands[i].band, (x->window_size / 2) * sizeof(t_float));
+}
+
 static void pod_tilde_free(t_pod_tilde* x)
 {
     t_freebytes(x->signal, x->window_size * sizeof(t_sample));
     t_freebytes(x->analysis, x->window_size * sizeof(t_sample));
     t_freebytes(x->window, x->window_size * sizeof(t_float));
+    
+    free_bark_bands(x);
+    
+    t_freebytes(x->filter_bands, sizeof(t_bark_bin));
 }
 
 static void pod_tilde_create_window(t_pod_tilde* x)
@@ -348,6 +384,9 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     x->signal = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
     x->analysis = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
     x->window = (t_float *)t_getbytes(x->window_size * sizeof(t_float));
+    
+    x->filter_bands = (t_bark_bin *)t_getbytes((NUM_BARKS) * sizeof(t_bark_bin));
+    
     for (int i = 0; i < x->window_size; i++)
     {
         x->signal[i] = 0.0;
