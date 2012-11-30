@@ -86,6 +86,11 @@ static void linspace(t_int low, t_int high, t_int subdiv, t_float* line_buffer)
         line_buffer[i] = line_buffer[i - 1] + iter;
 }
 
+static void multiply_filterbank(t_pod_tilde* x)
+{
+    
+}
+
 
 static void create_filterbank(t_pod_tilde* x)
 {
