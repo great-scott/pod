@@ -63,7 +63,7 @@ typedef struct _pod_tilde
     t_int       debounce_threshold;
     
     // filterbank
-    t_bark_bin* filter_bands;
+    t_bark_bin filter_bands[24];
     
 } t_pod_tilde;
 
@@ -324,8 +324,6 @@ static void pod_tilde_free(t_pod_tilde* x)
     t_freebytes(x->window, x->window_size * sizeof(t_float));
     
     free_bark_bands(x);
-    
-    t_freebytes(x->filter_bands, sizeof(t_bark_bin));
 }
 
 static void pod_tilde_create_window(t_pod_tilde* x)
@@ -384,9 +382,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     x->signal = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
     x->analysis = (t_sample *)t_getbytes(x->window_size * sizeof(t_sample));
     x->window = (t_float *)t_getbytes(x->window_size * sizeof(t_float));
-    
-    x->filter_bands = (t_bark_bin *)t_getbytes((NUM_BARKS) * sizeof(t_bark_bin));
-    
+        
     for (int i = 0; i < x->window_size; i++)
     {
         x->signal[i] = 0.0;
@@ -395,6 +391,9 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     }
     x->window_type = 0; //Default hanning
     pod_tilde_create_window(x);
+    
+    // create arrays for each bark filter band
+    new_bark_bands(x);
     
     if (! isPowerOfTwo(hop_size)){
         post("Hop size must be a power of two. Applying default hop size.");
