@@ -15,6 +15,7 @@
 		42C54FEB165D70E1000E2C2D /* pod~.pd_darwin */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = "pod~.pd_darwin"; sourceTree = BUILT_PRODUCTS_DIR; };
 		42C54FF3165D729F000E2C2D /* pod~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "pod~.c"; sourceTree = "<group>"; };
 		42C54FF5165D72FA000E2C2D /* m_pd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = m_pd.h; sourceTree = "<group>"; };
+		600E2A49166A860300C488BC /* pod~.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "pod~.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,6 +50,7 @@
 			children = (
 				42C54FF5165D72FA000E2C2D /* m_pd.h */,
 				42C54FF3165D729F000E2C2D /* pod~.c */,
+				600E2A49166A860300C488BC /* pod~.h */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -214,6 +216,7 @@
 				42C54FF1165D70E1000E2C2D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
