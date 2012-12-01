@@ -35,6 +35,7 @@
 t_int bark_lim[25] =  { 20, 100, 200, 300, 400, 510, 630, 770, 920, 1080, 1270, 1480, 1720, 2000, 2320, 2700, 3150, 3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500 };
 //t_int bark_ctr[24] = { 50, 150, 250, 350, 450, 570, 700, 840, 1000, 1170, 1370, 1600, 1850, 2150, 2500, 2900, 3400, 4000, 4800, 5800, 7000, 8500, 10500, 13500 };
 t_int bark_ctr[26] = {0, 50, 150, 250, 350, 450, 570, 700, 840, 1000, 1170, 1370, 1600, 1850, 2150, 2500, 2900, 3400, 4000, 4800, 5800, 7000, 8500, 10500, 13500, 15500};
+t_float band_weightings[24] = { 0.7762, 0.6854, 0.6647, 0.6373, 0.6255, 0.6170, 0.6139, 0.6107, 0.6127, 0.6329, 0.6380, 0.6430, 0.6151, 0.6033, 0.5914, 0.5843, 0.5895, 0.5947, 0.6237, 0.6703, 0.6920, 0.7137, 0.7217, 0.7217 };
 
 
 static t_class  *pod_tilde_class;
@@ -102,6 +103,22 @@ static void multiply_filterbank(t_pod_tilde* x)
         x->filtered_odd[i] = x->filter_bands[0].band[i] * x->analysis[i];           // non overlapping bands starting at 0
         x->filtered_even[i] = x->filter_bands[1].band[i] * x->analysis[i];          // non overlapping bands starting at 50 (first bark center)
         x->analysis[i] = x->filtered_odd[i] + x->filtered_even[i];
+    }
+}
+
+static void condense_analysis(t_pod_tilde* x)
+{
+    float period = FS / x->window_size;
+    
+    for (int i = 0; i < NUM_BARKS; i++)
+    {
+        for (int j = 0; j < x->half_window_size; j++)
+        {
+            float frequency = period * j;
+            
+            if (frequency >= bark_ctr[i] && frequency < bark_ctr[i + 2])
+                x->bark_bins[i] += x->analysis[j] * band_weightings[i];
+        }
     }
 }
 
