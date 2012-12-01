@@ -215,6 +215,28 @@ static void pod_tilde_set_window_type(t_pod_tilde* x, t_float number){
     
 }
 
+static void pod_tilde_set_debounce_threshold(t_pod_tilde* x, t_float number){
+    
+    int selection = (int) number;
+    // need to add error checking
+    x->debounce_threshold = selection;
+    
+}
+
+static void pod_tilde_set_upper_threshold(t_pod_tilde* x, t_float number){
+    
+    // need to add error checking
+    x->u_threshold = number;
+    
+}
+
+static void pod_tilde_set_lower_threshold(t_pod_tilde* x, t_float number){
+    
+    // need to add error checking
+    x->l_threshold = number;
+    
+}
+
 static t_float accumulate_bin_differences(t_pod_tilde* x){
     
     t_float diff = 0;
@@ -517,6 +539,8 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
 
 
 
+
+
 void pod_tilde_setup(void)
 {
     pod_tilde_class = class_new(gensym("pod~"), (t_newmethod)pod_tilde_new, (t_method)pod_tilde_free, sizeof(t_pod_tilde), CLASS_DEFAULT, A_DEFFLOAT, A_DEFFLOAT, 0);
@@ -539,5 +563,30 @@ void pod_tilde_setup(void)
         A_FLOAT,
         0
     );
+    
+    class_addmethod(
+        pod_tilde_class,
+        (t_method)pod_tilde_set_debounce_threshold,
+        gensym("debounce"),
+        A_FLOAT,
+        0
+    );
+    
+    class_addmethod(
+        pod_tilde_class,
+        (t_method)pod_tilde_set_upper_threshold,
+        gensym("upper"),
+        A_FLOAT,
+        0
+        );
+    
+    class_addmethod(
+        pod_tilde_class,
+        (t_method)pod_tilde_set_lower_threshold,
+        gensym("lower"),
+        A_FLOAT,
+        0
+        );
+    
 
 }
