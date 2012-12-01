@@ -283,6 +283,8 @@ static t_int* pod_tilde_perform(t_int* w)
         // multiply analysis buffer by the filterbank
         multiply_filterbank(x);
         
+        // turn analysis buffer into summed bark bins (i.e. turn 1 x half_windowsize vector -> 1 x 24 vector)
+        condense_analysis(x);
         
 ////////////////////////////// where the magic happens /////////////////////////////////////////////////
         
