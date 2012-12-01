@@ -52,6 +52,7 @@ typedef struct _pod_tilde
     t_sample    x_f;
     t_outlet*   bang;
     t_outlet*   mag_outlet;
+    t_outlet*   bin_diffs;
     t_float     o_a1, o_a2, o_b0, o_b1, o_b2;
     t_float     m_a1, m_a2, m_b0, m_b1, m_b2;
     t_sample*   signal;                         // this holds samples
@@ -221,6 +222,8 @@ static t_float accumulate_bin_differences(t_pod_tilde* x){
     for (int i = 0; i < length; i++){
         diff += x->bark_bins[i] - x->prev_bark_bins[i];
     }
+    
+    outlet_float(x->bin_diffs, diff);
     
     return diff;
 }
@@ -443,6 +446,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     // Leftmost outlet outputs a bang
     x->bang = outlet_new(&x->x_obj, &s_bang);
     x->mag_outlet = outlet_new(&x->x_obj, &s_float);
+    x->bin_diffs = outlet_new(&x->x_obj, &s_float);
     
     // Initialize filter coeffs
     // Outer
