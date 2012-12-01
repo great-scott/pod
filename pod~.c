@@ -64,7 +64,7 @@ typedef struct _pod_tilde
     t_int       dsp_tick;
     t_int       half_window_size;
     
-    //onset detection
+    //peak picking
     t_float     bark_bins[24];
     t_float     prev_bark_bins[24];
     t_float     u_threshold, l_threshold;
@@ -289,11 +289,8 @@ static t_int* pod_tilde_perform(t_int* w)
         // turn analysis buffer into summed bark bins (i.e. turn 1 x half_windowsize vector -> 1 x 24 vector)
         condense_analysis(x);
         
-////////////////////////////// where the magic happens /////////////////////////////////////////////////
         
-        
-        
-            //assume filterbanks are generalized into each bin of the length 24 array "bark_bins"
+        // -- spectral flux peak picking -- //
         
         //check for initial case
         if (x->prev_bark_bins != NULL) {
@@ -362,8 +359,8 @@ static t_int* pod_tilde_perform(t_int* w)
                             
                         }
                         
-                        //we have a onset flagged, but we haven't increased or crossed the lower threshold yet.
-                        //Lets wait a bit longer to make sure our tagged onset is legit
+                        //we have a peak flagged, but we haven't increased or crossed the lower threshold yet.
+                        //Lets wait a bit longer to make sure our tagged peak is an onset
                         else x->debounce_iterator++;
                     }
                       
@@ -505,11 +502,15 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     post("hop size: %i", x->hop_size);
     
     
-    
+    //Peak picking.
     //Lower our flag. No onsets yet!
+    
     x->flag = 0;
     x->debounce_iterator=0;
     x->debounce_threshold=5;
+    x->u_threshold = 1000;
+    x->l_threshold = 900;
+
     
     return (void *)x; 
 }
@@ -538,5 +539,5 @@ void pod_tilde_setup(void)
         A_FLOAT,
         0
     );
-    
+
 }
