@@ -498,11 +498,15 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     post("hop size: %i", x->hop_size);
     
     
-    
+    //Peak picking.
     //Lower our flag. No onsets yet!
+    
     x->flag = 0;
     x->debounce_iterator=0;
     x->debounce_threshold=5;
+    x->u_threshold = 1000;
+    x->l_threshold = 900;
+
     
     return (void *)x; 
 }
@@ -531,5 +535,5 @@ void pod_tilde_setup(void)
         A_FLOAT,
         0
     );
-    
+
 }
