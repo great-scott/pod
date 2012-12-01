@@ -297,6 +297,8 @@ static t_int* pod_tilde_perform(t_int* w)
         // turn analysis buffer into summed bark bins (i.e. turn 1 x half_windowsize vector -> 1 x 24 vector)
         condense_analysis(x);
         
+        // multiply by loudness curves
+        multiply_loudness(x);
         
         // -- spectral flux peak picking -- //
         
@@ -332,7 +334,7 @@ static t_int* pod_tilde_perform(t_int* w)
                         
                         //flag this as a better estimate for the onset.
                         x->flag = 1;
-                        x->debounce_threshold = 1;
+                        x->debounce_iterator = 1;
                         x->peak_value = x->bark_difference;
                         
                     }
@@ -451,9 +453,15 @@ static void condense_analysis(t_pod_tilde* x)
             float frequency = period * j;
             
             if (frequency >= bark_ctr[i] && frequency < bark_ctr[i + 2])
-                x->bark_bins[i] += x->analysis[j] * band_weightings[i];
+                x->bark_bins[i] += x->analysis[j];
         }
     }
+}
+
+static void multiply_loudness(t_pod_tilde* x)
+{
+    for (int i = 0; i < NUM_BARKS; i++)
+        x->bark_bins[i] *= band_weightings[i];
 }
 
 

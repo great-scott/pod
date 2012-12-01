@@ -86,6 +86,7 @@ static t_float pod_tilde_middle_filter(t_pod_tilde* x, t_sample in);
     //Inner Ear
 static void multiply_filterbank(t_pod_tilde* x);
 static void condense_analysis(t_pod_tilde* x);
+static void multiply_loudness(t_pod_tilde* x);
 
 //Peak Picking Helper Functions
 static t_float accumulate_bin_differences(t_pod_tilde* x);
