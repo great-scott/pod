@@ -97,6 +97,29 @@ void pod_tilde_setup(void)
         0
             );
     
+    class_addmethod(
+        pod_tilde_class,
+        (t_method)pod_tilde_set_upper_threshold_scale,
+        gensym("upper_scale"),
+        A_FLOAT,
+        0
+            );
+    
+    class_addmethod(
+        pod_tilde_class,
+        (t_method)pod_tilde_set_lower_threshold_scale,
+        gensym("lower_scale"),
+        A_FLOAT,
+        0
+            );
+    
+    class_addmethod(
+        pod_tilde_class,
+        (t_method)pod_tilde_reset_average,
+        gensym("reset"),
+        0
+            );
+    
     
 }
 
@@ -177,6 +200,8 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     x->debounce_threshold=5;
     x->u_threshold = 1000;
     x->l_threshold = 10;
+    x->upper_threshold_scale = 10.0;
+    x->lower_threshold_scale = 1.0;
     x->consecutive_onset_filtering_threshold = floor(30/(((x->hop_size)*1000)/FS));
     x->consecutive_onset_filtering_iterator = 0;
     x->consecutive_onset_flag = 0;
@@ -299,11 +324,17 @@ static t_int* pod_tilde_perform(t_int* w)
         x->analysis[0] = 0.0;
         x->analysis[x->window_size / 2] = 0.0;
         
+        // scaling the analysis values by the window size
+        for (int i = 0; i < x->window_size; i++)
+            x->analysis[i] = x->analysis[i] / x->window_size;
+        
         // Get the magnitude and assign it to the first half of the analysis buffer
         for (int i = 0; i < x->window_size / 2; i++)
         {
             int i_index = x->window_size - i;
             x->analysis[i] = sqrt((x->analysis[i] * x->analysis[i]) + (x->analysis[i_index] * x->analysis[i_index]));
+            //x->analysis[i] = (x->analysis[i] * x->analysis[i]) + (x->analysis[i_index] * x->analysis[i_index]);
+
         }
         
         // multiply analysis buffer by the filterbank
@@ -421,9 +452,9 @@ static t_int* pod_tilde_perform(t_int* w)
             
             
             float new_mean = mean(x, x->bark_difference);
-            //post("mean: %f", new_mean);
-            pod_tilde_set_upper_threshold(x, new_mean * 40.0);
-            //pod_tilde_set_lower_threshold(x, new_mean * 30.0);
+
+            pod_tilde_set_upper_threshold(x, new_mean * x->upper_threshold_scale);
+            pod_tilde_set_lower_threshold(x, new_mean * x->lower_threshold_scale);
         }
         
         iterate_bark_bins(x);
@@ -517,7 +548,7 @@ static t_float accumulate_bin_differences(t_pod_tilde* x){
     t_float diff = 0;
     t_int length = sizeof(x->bark_bins) / sizeof(t_float);
     for (int i = 0; i < length; i++){
-        diff += halfwave_rectify(x->bark_bins[i] - x->prev_bark_bins[i]);
+        diff += halfwave_rectify(fabs(x->bark_bins[i]) - fabs(x->prev_bark_bins[i]));
     }
     
     outlet_float(x->bin_diffs, diff);
@@ -551,23 +582,6 @@ static float halfwave_rectify(float value)
 static float mean(t_pod_tilde* x, t_float new_value)
 {    
     t_mean_vec* m = &x->mean_vec;
-//    t_float sum = 0.0;
-//    
-//    for (int i = 0; i < x->current_queue_size; i++)
-//        sum = sum + new_value + x->queue[i];
-//    
-//    if (x->current_queue_size == 0)
-//    {
-//        sum = new_value;
-//        x->queue[0] = new_value;
-//    }
-//    
-//    m->mean = sum / x->current_queue_size + 1;
-//    
-//    if (x->current_queue_size < QUEUE_SIZE)
-//        x->current_queue_size++;
-//    
-//    shift_queue(x, new_value);
     
     m->mean = (m->mean * m->num_values + new_value) / (m->num_values + 1);
     m->num_values++;
@@ -650,6 +664,27 @@ static void pod_tilde_set_consecutive_threshold(t_pod_tilde* x, t_float number){
     // need to add error checking
     x->consecutive_onset_filtering_threshold = floor(number/(((x->hop_size)*1000)/FS));
     
+}
+
+static void pod_tilde_set_upper_threshold_scale(t_pod_tilde* x, t_float number)
+{
+    if (number == 0.0)
+        x->upper_threshold_scale = 0.01;
+    
+    x->upper_threshold_scale = number;
+}
+
+static void pod_tilde_set_lower_threshold_scale(t_pod_tilde* x, t_float number)
+{
+    if (number == 0.0)
+        x->lower_threshold_scale = 0.01;
+    
+    x->lower_threshold_scale = number;
+}
+
+static void pod_tilde_reset_average(t_pod_tilde* x)
+{
+    x->mean_vec.num_values = 0;
 }
 
 

@@ -67,6 +67,8 @@ typedef struct _pod_tilde
     t_int       consecutive_onset_filtering_threshold;
     t_int       consecutive_onset_filtering_iterator;
     t_int       consecutive_onset_flag;
+    t_float     lower_threshold_scale;
+    t_float     upper_threshold_scale;
     
     // filterbank
     t_bark_bin  filter_bands[2];
@@ -125,6 +127,10 @@ static void pod_tilde_set_debounce_threshold(t_pod_tilde* x, t_float number);
 static void pod_tilde_set_upper_threshold(t_pod_tilde* x, t_float number);
 static void pod_tilde_set_lower_threshold(t_pod_tilde* x, t_float number);
 static void pod_tilde_set_consecutive_threshold(t_pod_tilde* x, t_float number);
+static void pod_tilde_set_upper_threshold_scale(t_pod_tilde* x, t_float number);
+static void pod_tilde_set_lower_threshold_scale(t_pod_tilde* x, t_float number);
+static void pod_tilde_reset_average(t_pod_tilde* x);
+
 
 
 
