@@ -498,7 +498,7 @@ static t_float accumulate_bin_differences(t_pod_tilde* x){
     t_float diff = 0;
     t_int length = sizeof(x->bark_bins) / sizeof(t_float);
     for (int i = 0; i < length; i++){
-        diff += x->bark_bins[i] - x->prev_bark_bins[i];
+        diff += ((x->bark_bins[i] - x->prev_bark_bins[i]) + (x->bark_bins[i] - x->prev_bark_bins[i]))/2;
     }
     
     outlet_float(x->bin_diffs, diff);
