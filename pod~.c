@@ -474,7 +474,7 @@ static t_float accumulate_bin_differences(t_pod_tilde* x){
     t_float diff = 0;
     t_int length = sizeof(x->bark_bins) / sizeof(t_float);
     for (int i = 0; i < length; i++){
-        diff += ((x->bark_bins[i] - x->prev_bark_bins[i]) + (x->bark_bins[i] - x->prev_bark_bins[i]))/2;
+        diff += halfwave_rectify(x->bark_bins[i] - x->prev_bark_bins[i]);
     }
     
     outlet_float(x->bin_diffs, diff);
@@ -498,6 +498,11 @@ static int isPowerOfTwo(unsigned int x)
 {
     //Complement and Compare
     return ((x != 0) && ((x & (~x + 1)) == x));
+}
+
+static float halfwave_rectify(float value)
+{
+    return (value + fabs(value) / 2);
 }
 
 #pragma mark - Memory Management -

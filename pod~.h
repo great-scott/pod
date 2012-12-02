@@ -94,6 +94,7 @@ static void iterate_bark_bins(t_pod_tilde* x);
 
 //Utilities
 static int isPowerOfTwo(unsigned int x);
+static float halfwave_rectify(float value);
 
 //Memory managment
 static void free_bark_bands(t_pod_tilde* x);
