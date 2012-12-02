@@ -348,6 +348,7 @@ static t_int* pod_tilde_perform(t_int* w)
                             //onset verified!
                             outlet_bang(x->bang);
                             outlet_float(x->mag_outlet, x->peak_value);
+                            post("onset: debounce window exceeded");
                             
                             x->debounce_iterator = 0;
                             x->flag = 0;
@@ -362,6 +363,7 @@ static t_int* pod_tilde_perform(t_int* w)
                                 //onset verified!
                                 outlet_bang(x->bang);
                                 outlet_float(x->mag_outlet, x->peak_value);
+                                post("onset: lower threshold");
                                 
                                 x->debounce_iterator = 0;
                                 x->flag = 0;
