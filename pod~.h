@@ -73,6 +73,10 @@ typedef struct _pod_tilde
     t_sample*   filtered_odd;
     t_sample*   filtered_even;
     
+    // poor man's queue
+    t_float     queue[10000];
+    t_int       current_queue_size;
+    
     
 } t_pod_tilde;
 
@@ -106,6 +110,7 @@ static void iterate_bark_bins(t_pod_tilde* x);
 static int isPowerOfTwo(unsigned int x);
 static float halfwave_rectify(float value);
 static float mean(t_pod_tilde* x, t_float new_value);
+static void shift_queue(t_pod_tilde* x, t_float new_value);
 
 //Memory managment
 static void free_bark_bands(t_pod_tilde* x);

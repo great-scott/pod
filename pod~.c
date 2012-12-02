@@ -31,6 +31,7 @@
 #define PI 3.14159265359
 #define TWO_PI (2 * PI)
 #define NUM_BARKS 24
+#define QUEUE_SIZE 10000
 
 #define NUM_BARK_FILTER_BUFS 2
 
@@ -175,7 +176,7 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     x->debounce_iterator=0;
     x->debounce_threshold=5;
     x->u_threshold = 1000;
-    x->l_threshold = 900;
+    x->l_threshold = 10;
     x->consecutive_onset_filtering_threshold = floor(30/(((x->hop_size)*1000)/FS));
     x->consecutive_onset_filtering_iterator = 0;
     x->consecutive_onset_flag = 0;
@@ -548,20 +549,35 @@ static float halfwave_rectify(float value)
 }
 
 static float mean(t_pod_tilde* x, t_float new_value)
-{
-//    float sum = 0;
-//    int length = sizeof(vector) / sizeof(t_sample);
-//    for (int i = 0; i < length; i++)
-//        sum += vector[i];
-//    
-//    return sum / length;
-    
+{    
     t_mean_vec* m = &x->mean_vec;
+    t_float sum = 0.0;
     
-    m->mean = (m->mean * m->num_values + new_value) / (m->num_values + 1);
-    m->num_values++;
+    for (int i = 0; i < x->current_queue_size; i++)
+        sum = sum + new_value + x->queue[i];
+    
+    if (x->current_queue_size == 0)
+    {
+        sum = new_value;
+        x->queue[0] = new_value;
+    }
+    
+    m->mean = sum / x->current_queue_size + 1;
+    
+    if (x->current_queue_size < QUEUE_SIZE)
+        x->current_queue_size++;
+    
+    shift_queue(x, new_value);
     
     return m->mean;
+}
+
+static void shift_queue(t_pod_tilde* x, t_float new_value)
+{
+    for (int i = 0; i < QUEUE_SIZE - 1; i++)
+        x->queue[i] = x->queue[i + 1];
+    
+    x->queue[QUEUE_SIZE - 1] = new_value;
 }
 
 #pragma mark - Memory Management -
