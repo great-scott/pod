@@ -57,6 +57,9 @@ typedef struct _pod_tilde
     t_int       flag;
     t_int       debounce_iterator;
     t_int       debounce_threshold;
+    t_int       consecutive_onset_filtering_threshold;
+    t_int       consecutive_onset_filtering_iterator;
+    t_int       consecutive_onset_flag;
     
     // filterbank
     t_bark_bin  filter_bands[2];

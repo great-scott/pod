@@ -162,13 +162,15 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     
     
     //Peak picking.
-    //Lower our flag. No onsets yet!
     
     x->flag = 0;
     x->debounce_iterator=0;
     x->debounce_threshold=5;
     x->u_threshold = 1000;
     x->l_threshold = 900;
+    x->consecutive_onset_filtering_threshold = floor(30/(((x->hop_size)*1000)/FS));
+    x->consecutive_onset_filtering_iterator = 0;
+    x->consecutive_onset_flag = 0;
     
     
     return (void *)x;
@@ -309,6 +311,15 @@ static t_int* pod_tilde_perform(t_int* w)
             x->bark_difference = accumulate_bin_differences(x);
             
             
+            //Consecutive onset filtering
+            if (x->consecutive_onset_flag == 1) {
+                if (x->consecutive_onset_filtering_iterator > x->consecutive_onset_filtering_threshold) {
+                    x->consecutive_onset_flag = 0;
+                    x->consecutive_onset_filtering_iterator = 0;
+                }
+                else x->consecutive_onset_filtering_iterator++;
+            }
+            
             //Is our flag raised?
             switch (x->flag) {
                     
@@ -345,6 +356,8 @@ static t_int* pod_tilde_perform(t_int* w)
                         //Have we gone beyond our debouncing window?
                         if (x->debounce_iterator > x->debounce_threshold) {
                             
+                            if (x->consecutive_onset_flag == 0) {
+
                             //onset verified!
                             outlet_bang(x->bang);
                             outlet_float(x->mag_outlet, x->peak_value);
@@ -352,6 +365,11 @@ static t_int* pod_tilde_perform(t_int* w)
                             
                             x->debounce_iterator = 0;
                             x->flag = 0;
+                            x->consecutive_onset_flag=1;
+                                
+                            }
+                            
+                            else post("consecutive onset ignored");
                             
                         }
                         
@@ -360,6 +378,8 @@ static t_int* pod_tilde_perform(t_int* w)
                             //are we below our lower threshold?
                             if(x->bark_difference < x->l_threshold){
                                 
+                                if (x->consecutive_onset_flag == 0) {
+                                    
                                 //onset verified!
                                 outlet_bang(x->bang);
                                 outlet_float(x->mag_outlet, x->peak_value);
@@ -367,7 +387,11 @@ static t_int* pod_tilde_perform(t_int* w)
                                 
                                 x->debounce_iterator = 0;
                                 x->flag = 0;
+                                x->consecutive_onset_flag=1;
                                 
+                                }
+                                
+                                else post("consecutive onset ignored");
                                 
                             }
                             
