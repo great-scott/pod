@@ -171,6 +171,10 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     x->l_threshold = 900;
     
     
+    x->mean_vec.mean = 0.0;
+    x->mean_vec.num_values = 0;
+    
+    
     return (void *)x;
 }
 
@@ -381,6 +385,12 @@ static t_int* pod_tilde_perform(t_int* w)
                     
                     break;
             }
+            
+            
+            float new_mean = mean(x, x->bark_difference);
+            //post("mean: %f", new_mean);
+            pod_tilde_set_upper_threshold(x, new_mean * 40.0);
+            //pod_tilde_set_lower_threshold(x, new_mean * 30.0);
         }
         
         iterate_bark_bins(x);
@@ -503,6 +513,23 @@ static int isPowerOfTwo(unsigned int x)
 static float halfwave_rectify(float value)
 {
     return (value + fabs(value) / 2);
+}
+
+static float mean(t_pod_tilde* x, t_float new_value)
+{
+//    float sum = 0;
+//    int length = sizeof(vector) / sizeof(t_sample);
+//    for (int i = 0; i < length; i++)
+//        sum += vector[i];
+//    
+//    return sum / length;
+    
+    t_mean_vec* m = &x->mean_vec;
+    
+    m->mean = (m->mean * m->num_values + new_value) / (m->num_values + 1);
+    m->num_values++;
+    
+    return m->mean;
 }
 
 #pragma mark - Memory Management -

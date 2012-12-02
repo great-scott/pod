@@ -30,6 +30,12 @@ typedef struct _bark_bin
     
 } t_bark_bin;
 
+typedef struct _mean_vec
+{
+    t_float     mean;
+    t_int       num_values;
+} t_mean_vec;
+
 typedef struct _pod_tilde
 {
     t_object    x_obj;
@@ -57,6 +63,7 @@ typedef struct _pod_tilde
     t_int       flag;
     t_int       debounce_iterator;
     t_int       debounce_threshold;
+    t_mean_vec  mean_vec;
     
     // filterbank
     t_bark_bin  filter_bands[2];
@@ -95,6 +102,7 @@ static void iterate_bark_bins(t_pod_tilde* x);
 //Utilities
 static int isPowerOfTwo(unsigned int x);
 static float halfwave_rectify(float value);
+static float mean(t_pod_tilde* x, t_float new_value);
 
 //Memory managment
 static void free_bark_bands(t_pod_tilde* x);
