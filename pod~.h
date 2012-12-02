@@ -110,7 +110,7 @@ static void pod_tilde_set_window_type(t_pod_tilde* x, t_float number);
 static void pod_tilde_set_debounce_threshold(t_pod_tilde* x, t_float number);
 static void pod_tilde_set_upper_threshold(t_pod_tilde* x, t_float number);
 static void pod_tilde_set_lower_threshold(t_pod_tilde* x, t_float number);
-
+static void pod_tilde_set_consecutive_threshold(t_pod_tilde* x, t_float number);
 
 
 

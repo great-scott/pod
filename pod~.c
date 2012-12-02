@@ -88,6 +88,14 @@ void pod_tilde_setup(void)
         0
             );
     
+    class_addmethod(
+        pod_tilde_class,
+        (t_method)pod_tilde_set_consecutive_threshold,
+        gensym("consec"),
+        A_FLOAT,
+        0
+            );
+    
     
 }
 
@@ -583,6 +591,13 @@ static void pod_tilde_set_lower_threshold(t_pod_tilde* x, t_float number){
     
     // need to add error checking
     x->l_threshold = number;
+    
+}
+
+static void pod_tilde_set_consecutive_threshold(t_pod_tilde* x, t_float number){
+    
+    // need to add error checking
+    x->consecutive_onset_filtering_threshold = floor(number/(((x->hop_size)*1000)/FS));
     
 }
 
