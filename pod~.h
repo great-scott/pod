@@ -69,6 +69,11 @@ typedef struct _pod_tilde
     t_int       consecutive_onset_flag;
     t_float     lower_threshold_scale;
     t_float     upper_threshold_scale;
+    t_int       maskingThreshold;
+    t_float     maskingDecay;
+    t_int       maskFlag;
+    t_int       maskIterator;
+    t_int       automaticThresholding;
     
     // filterbank
     t_bark_bin  filter_bands[2];
