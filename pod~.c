@@ -205,6 +205,10 @@ static void* pod_tilde_new(t_floatarg window_size, t_floatarg hop_size)
     x->consecutive_onset_filtering_threshold = floor(30/(((x->hop_size)*1000)/FS));
     x->consecutive_onset_filtering_iterator = 0;
     x->consecutive_onset_flag = 0;
+    x->maskingDecay=0.7;
+    x->maskingThreshold=4;
+    x->maskIterator=0;
+    x->maskFlag = 0;
     
     
     x->mean_vec.mean = 0.0;
@@ -354,6 +358,17 @@ static t_int* pod_tilde_perform(t_int* w)
             //subtract this frame from last to get to our feature space
             x->bark_difference = accumulate_bin_differences(x);
             
+            //masking
+            if (x->maskFlag == 1) {
+                if (x->maskIterator == x->maskingThreshold) {
+                    x->maskFlag = 0;
+                    x->maskIterator =0;
+                }
+                else
+                x->bark_difference = x->bark_difference*(x->maskingDecay*(x->maskingThreshold-x->maskIterator));
+                x->maskIterator ++;
+            }
+            
             
             //Consecutive onset filtering
             if (x->consecutive_onset_flag == 1) {
@@ -410,10 +425,11 @@ static t_int* pod_tilde_perform(t_int* w)
                             x->debounce_iterator = 0;
                             x->flag = 0;
                             x->consecutive_onset_flag=1;
+                            x->maskFlag = 1;
                                 
                             }
                             
-                            else post("consecutive onset ignored");
+                            //else post("consecutive onset ignored");
                             
                         }
                         
@@ -432,10 +448,11 @@ static t_int* pod_tilde_perform(t_int* w)
                                 x->debounce_iterator = 0;
                                 x->flag = 0;
                                 x->consecutive_onset_flag=1;
+                                x->maskFlag = 1;
                                 
                                 }
                                 
-                                else post("consecutive onset ignored");
+                                //else post("consecutive onset ignored");
                                 
                             }
                             
@@ -451,10 +468,14 @@ static t_int* pod_tilde_perform(t_int* w)
             }
             
             
+            if (x->automaticThresholding == 1) {
+
             float new_mean = mean(x, x->bark_difference);
 
             pod_tilde_set_upper_threshold(x, new_mean * x->upper_threshold_scale);
             pod_tilde_set_lower_threshold(x, new_mean * x->lower_threshold_scale);
+                
+            }
         }
         
         iterate_bark_bins(x);
@@ -649,6 +670,7 @@ static void pod_tilde_set_upper_threshold(t_pod_tilde* x, t_float number){
     
     // need to add error checking
     x->u_threshold = number;
+    x->automaticThresholding = 0;
     
 }
 
@@ -656,6 +678,7 @@ static void pod_tilde_set_lower_threshold(t_pod_tilde* x, t_float number){
     
     // need to add error checking
     x->l_threshold = number;
+    x->automaticThresholding = 0;
     
 }
 
@@ -672,6 +695,7 @@ static void pod_tilde_set_upper_threshold_scale(t_pod_tilde* x, t_float number)
         x->upper_threshold_scale = 0.01;
     
     x->upper_threshold_scale = number;
+    x->automaticThresholding = 1;
 }
 
 static void pod_tilde_set_lower_threshold_scale(t_pod_tilde* x, t_float number)
@@ -680,6 +704,7 @@ static void pod_tilde_set_lower_threshold_scale(t_pod_tilde* x, t_float number)
         x->lower_threshold_scale = 0.01;
     
     x->lower_threshold_scale = number;
+    x->automaticThresholding = 1;
 }
 
 static void pod_tilde_reset_average(t_pod_tilde* x)
