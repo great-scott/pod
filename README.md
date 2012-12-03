@@ -18,9 +18,9 @@ for determining where an onset occurs.
 Setup
 -----
 Mac: An Xcode 4 project is provided to build the object.
-    - Specific path settings will need to be changed to automate copying the pod~.darwin
+    <br>- Specific path settings will need to be changed to automate copying the pod~.darwin
       target to the appropriate location.
-    - Additional settings will need to change to automatically launch the Pd binary and
+    <br>- Additional settings will need to change to automatically launch the Pd binary and
       attach to that process (in order to debug)
 
 Windows and Linux: It's definitely possible to build using another system. It should just
