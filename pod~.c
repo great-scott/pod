@@ -365,7 +365,9 @@ static t_int* pod_tilde_perform(t_int* w)
                     x->maskIterator =0;
                 }
                 else
-                x->bark_difference = x->bark_difference*(x->maskingDecay*(x->maskingThreshold-x->maskIterator));
+                    for (int i =0; i<x->maskingThreshold-x->maskIterator; i++){
+                        x->bark_difference = x->bark_difference * x->maskingThreshold;
+                    }
                 x->maskIterator ++;
             }
             
@@ -403,6 +405,7 @@ static t_int* pod_tilde_perform(t_int* w)
                     
                 case 1: //Flag is up.
                     
+                        
                     //did we go even higher above the threshold?
                     if (x->bark_difference > x->peak_value) {
                         
@@ -480,8 +483,8 @@ static t_int* pod_tilde_perform(t_int* w)
 
             float new_mean = mean(x, x->bark_difference);
 
-            pod_tilde_set_upper_threshold(x, new_mean * x->upper_threshold_scale);
-            pod_tilde_set_lower_threshold(x, new_mean * x->lower_threshold_scale);
+            x->u_threshold = new_mean * x->upper_threshold_scale;
+            x->l_threshold = new_mean * x->lower_threshold_scale;
                 
             }
         }
