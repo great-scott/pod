@@ -477,12 +477,9 @@ static t_int* pod_tilde_perform(t_int* w)
             }
             
             
-            if (x->automaticThresholding == 1) {
-
-            float new_mean = mean(x, x->bark_difference);
-
-            x->u_threshold = new_mean * x->upper_threshold_scale;
-            x->l_threshold = new_mean * x->lower_threshold_scale;
+            if (x->automaticThresholding == 1) 
+            {
+                float new_mean = mean(x, x->bark_difference);
                 
                 x->u_threshold = new_mean * x->upper_threshold_scale;
                 x->l_threshold = new_mean * x->lower_threshold_scale;
