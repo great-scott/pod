@@ -387,10 +387,14 @@ static t_int* pod_tilde_perform(t_int* w)
                     //Lets check if we're above the upper threshold
                     if (x->bark_difference > x->u_threshold) {
                         
+                        if (x->consecutive_onset_flag == 0) {
+                            
                         //Let's flag this spot for a potential onset and hang on to that peak value if it ends up being one
                         x->flag = 1;
                         x->debounce_iterator = 1;
                         x->peak_value=x->bark_difference;
+                            
+                        }
                     }
                     
                     //otherwise, we'll keep waiting for an onset.
@@ -402,10 +406,14 @@ static t_int* pod_tilde_perform(t_int* w)
                     //did we go even higher above the threshold?
                     if (x->bark_difference > x->peak_value) {
                         
+                        if (x->consecutive_onset_flag == 0) {
+                            
                         //flag this as a better estimate for the onset.
                         x->flag = 1;
                         x->debounce_iterator = 1;
                         x->peak_value = x->bark_difference;
+                            
+                        }
                         
                     }
                     
