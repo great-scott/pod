@@ -32,12 +32,10 @@
 #define TWO_PI (2 * PI)
 #define NUM_BARKS 24
 #define QUEUE_SIZE 10000
-
 #define NUM_BARK_FILTER_BUFS 2
 
 // define bark limits and centers
 t_int bark_lim[25] =  { 20, 100, 200, 300, 400, 510, 630, 770, 920, 1080, 1270, 1480, 1720, 2000, 2320, 2700, 3150, 3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500 };
-//t_int bark_ctr[24] = { 50, 150, 250, 350, 450, 570, 700, 840, 1000, 1170, 1370, 1600, 1850, 2150, 2500, 2900, 3400, 4000, 4800, 5800, 7000, 8500, 10500, 13500 };
 t_int bark_ctr[26] = {0, 50, 150, 250, 350, 450, 570, 700, 840, 1000, 1170, 1370, 1600, 1850, 2150, 2500, 2900, 3400, 4000, 4800, 5800, 7000, 8500, 10500, 13500, 15500};
 t_float band_weightings[24] = { 0.7762, 0.6854, 0.6647, 0.6373, 0.6255, 0.6170, 0.6139, 0.6107, 0.6127, 0.6329, 0.6380, 0.6430, 0.6151, 0.6033, 0.5914, 0.5843, 0.5895, 0.5947, 0.6237, 0.6703, 0.6920, 0.7137, 0.7217, 0.7217 };
 
@@ -454,7 +452,7 @@ static t_int* pod_tilde_perform(t_int* w)
                                 //onset verified!
                                 outlet_bang(x->bang);
                                 outlet_float(x->mag_outlet, x->peak_value);
-                                post("onset: lower threshold");
+                                //post("onset: lower threshold");
                                 
                                 x->debounce_iterator = 0;
                                 x->flag = 0;
@@ -486,6 +484,9 @@ static t_int* pod_tilde_perform(t_int* w)
             x->u_threshold = new_mean * x->upper_threshold_scale;
             x->l_threshold = new_mean * x->lower_threshold_scale;
                 
+                x->u_threshold = new_mean * x->upper_threshold_scale;
+                x->l_threshold = new_mean * x->lower_threshold_scale;
+
             }
         }
         
